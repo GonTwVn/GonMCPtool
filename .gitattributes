@@ -1,2 +1,36 @@
-# Auto detect text files and perform LF normalization
-* text=auto
+# 設定所有文本文件的行尾格式
+* text=auto eol=lf
+
+# 設定特定文件的文本格式
+*.ts text eol=lf
+*.js text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.html text eol=lf
+*.css text eol=lf
+*.scss text eol=lf
+
+# 標示二進制文件
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.gz binary
+*.zip binary
+*.7z binary
+*.ttf binary
+*.eot binary
+*.woff binary
+*.woff2 binary
+*.svg text
+
+# 設定語言檢測
+*.ts linguist-language=TypeScript
+*.js linguist-language=JavaScript
+
+# 排除特定文件不計入語言統計
+dist/* linguist-generated=true
+node_modules/* linguist-vendored=true

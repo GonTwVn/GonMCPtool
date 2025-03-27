@@ -1,0 +1,37 @@
+# 源文件（如果只需要發布編譯後的文件）
+src/
+
+# 測試文件
+test/
+__tests__/
+*.spec.ts
+*.test.ts
+
+# 配置文件
+.gitignore
+.gitattributes
+.eslintrc
+.eslintignore
+.editorconfig
+.prettierrc
+.prettierignore
+tsconfig.json
+jest.config.js
+.travis.yml
+.github/
+
+# 文檔文件（視情況而定）
+# docs/
+# *.md
+
+# 日誌
+logs/
+*.log
+
+# 其他不需要發布的文件
+.DS_Store
+.env*
+.vscode/
+.idea/
+coverage/
+.nyc_output/

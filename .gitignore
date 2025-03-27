@@ -1,0 +1,47 @@
+# 依賴目錄
+node_modules/
+
+# 編譯輸出
+dist/
+build/
+out/
+*.tsbuildinfo
+
+# 環境配置
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# 日誌
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# 編輯器配置
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# 系統文件
+Thumbs.db
+.DS_Store
+
+# 測試報告
+coverage/
+.nyc_output/
+
+# 快取
+.npm
+.eslintcache
+.cache/
+
+# 其他
+*.lock
+!yarn.lock
+!package-lock.json

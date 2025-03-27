@@ -1,0 +1,22 @@
+{
+  "name": "simple-mcp-server",
+  "version": "1.0.0",
+  "description": "簡單的 Anthropic Message Control Protocol (MCP) 服務器",
+  "main": "dist/main.js",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/main.js",
+    "dev": "tsc -w & node --watch dist/main.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "csv-parse": "^5.5.5",
+    "csv-stringify": "^6.4.5",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.5",
+    "typescript": "^5.3.3"
+  }
+}
