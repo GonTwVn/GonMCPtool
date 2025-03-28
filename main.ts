@@ -46,7 +46,6 @@ server.tool("npmBuild",
             };
         }
     });
-);
 
 // Add npm install tool
 server.tool("npmInstall",
