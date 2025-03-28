@@ -45,7 +45,7 @@ server.tool("npmBuild",
                 content: [{ type: "text", text: `Build failed: ${error instanceof Error ? error.message : "Unknown error"}` }]
             };
         }
-);    }
+    });
 );
 
 // Add npm install tool
@@ -215,6 +215,7 @@ server.tool("fileRead",
             };
         }
     }
+);
 
 // 添加檔案編輯工具
 server.tool("edit_file",
@@ -297,7 +298,6 @@ server.tool("delete_from_file",
             };
         }
     }
-);
 );
 
 // Add localization tools
