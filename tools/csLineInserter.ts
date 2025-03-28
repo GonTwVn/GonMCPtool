@@ -2,18 +2,18 @@ import fs from 'fs/promises';
 import { existsSync } from 'fs';
 
 /**
- * 文件行間插入工具 - 在指定行之後插入內容
+ * 文件行間插入工具 - 在指定行插入內容
  */
 export class myFileInsert {
     /**
-     * 在指定行之後插入內容
+     * 在指定行插入內容
      * @param filePath 檔案路徑
-     * @param lineNumber 行號（在此行之後插入）
+     * @param lineNumber 行號（在此行插入內容，原內容將向下移動）
      * @param content 要插入的內容
      * @param indentToMatch 是否匹配目標行的縮排
      * @returns 操作結果訊息
      */
-    static async insertAfterLine(
+    static async insertAtLine(
         filePath: string, 
         lineNumber: number, 
         content: string, 
@@ -46,13 +46,13 @@ export class myFileInsert {
                 }).join('\n');
             }
 
-            // 插入內容
-            lines.splice(lineNumber, 0, contentToInsert);
+            // 插入內容（在指定行號 -1 的位置插入，使原內容向下移動）
+            lines.splice(lineNumber - 1, 0, contentToInsert);
 
             // 寫回檔案
             await fs.writeFile(filePath, lines.join('\n'), 'utf8');
 
-            return `成功在第 ${lineNumber} 行後插入內容`;
+            return `成功在第 ${lineNumber} 行插入內容`;
         } catch (error) {
             console.error(`插入內容時發生錯誤: ${error}`);
             return `插入內容時發生錯誤: ${error instanceof Error ? error.message : '未知錯誤'}`;
