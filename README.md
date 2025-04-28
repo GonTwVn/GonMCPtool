@@ -1,5 +1,7 @@
 # MCP 伺服器工具集
 
+[![smithery badge](https://smithery.ai/badge/@GonTwVn/GonMCPtool)](https://smithery.ai/server/@GonTwVn/GonMCPtool)
+
 這是一個基於 Model Context Protocol 的伺服器工具集，提供多種功能來輔助開發和維護工作。
 
 ## 功能概覽
@@ -183,4 +185,4 @@ fileRead({
 
 3. 檔案路徑可以是相對路徑或絕對路徑。
 
-4. 進行批次操作時，建議使用 `edit_file` 工具，可以在一次調用中進行多個編輯操作。
+4. 進行批次操作時，建議使用 `edit_file` 工具，可以在一次調用中進行多個編輯操作.
