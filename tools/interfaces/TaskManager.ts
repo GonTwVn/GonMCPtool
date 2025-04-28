@@ -42,6 +42,20 @@ export interface Task {
    * 任務期限時間
    */
   dueDate?: string;
+    /**
+     * 預計開始時間
+     */
+    plannedStartDate?: string;
+    /**
+     * 實際開始時間
+     */
+    actualStartDate?: string;
+      /**
+       * 實際完成時間
+       */
+      actualCompletionDate?: string;
+
+  
   
   /**
    * 任務狀態
@@ -99,10 +113,14 @@ export enum TaskStatus {
  */
 export interface TaskFilter {
   status?: TaskStatus;
+    plannedStartDateFrom?: string;
+    plannedStartDateTo?: string;
   tags?: string[];
   priority?: number;
   dueDateFrom?: string;
   dueDateTo?: string;
+  createdFrom?: string;
+  createdTo?: string;
   searchText?: string;
 }
 
@@ -118,4 +136,21 @@ export interface TaskAnalysis {
   overdueTasksCount: number;
   averageCompletionTime?: number;
   tagDistribution: Record<string, number>;
+  /**
+   * 實際工作時間與預計時間的平均差異（分鐘）
+   * 正值表示超過預計時間，負值表示提前完成
+   * 實際工作時間是依據實際開始時間到完成時間計算
+   */
+  averageTimeDifference?: number;
+  /**
+   * 按任務分類的時間差異分析
+   */
+  taskTimeDifferences?: {
+    taskId: string;
+    title: string;
+    completionDate: string;
+    estimatedTotalTime: number;
+    actualWorkTime: number; // 實際工作時間(從實際開始時間到完成時間)
+    timeDifference: number;
+  }[];
 }

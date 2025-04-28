@@ -48,6 +48,11 @@
 - **taskAnalyze** - 獲取任務狀態分析報告
 - **taskSetAllSteps** - 設定某個任務所有步驟的完成狀態
 - **taskGenerateReport** - 生成任務進度Markdown報告
+- **taskGuidanceRead** - 讀取AI任務指導文件
+- **taskGuidanceWrite** - 寫入AI任務指導文件
+- **taskStart** - 開始一個任務
+- **taskComplete** - 完成一個任務
+
 
 ## 檔案操作工具詳細說明
 

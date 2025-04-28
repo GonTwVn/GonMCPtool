@@ -7,6 +7,7 @@ import fs from 'fs';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import { Task, TaskStep, TaskStatus, TaskFilter, TaskAnalysis } from './interfaces/TaskManager.js';
+import { TaskTimeUtils } from './utils/taskTimeUtils.js';
 
 export class TaskManagerTool {
   private static TASKS_DIR = './task';
@@ -81,6 +82,7 @@ export class TaskManagerTool {
     steps: Omit<TaskStep, 'id'>[],
     tags: string[] = [],
     dueDate?: string,
+    plannedStartDate?: string,
     priority: number = 3
   ): Promise<Task> {
     if (!title || !description) {
@@ -110,8 +112,8 @@ export class TaskManagerTool {
       steps: taskSteps,
       tags,
       createdAt: now,
+      plannedStartDate,
       updatedAt: now,
-      dueDate,
       status: TaskStatus.PENDING,
       priority
     };
@@ -143,6 +145,7 @@ export class TaskManagerTool {
 
   /**
    * 更新任務
+   * 注意：此方法不能用於將任務標記為已完成，請使用 completeTask 方法
    */
   public static async updateTask(id: string, updates: Partial<Omit<Task, 'id' | 'createdAt'>>): Promise<Task | null> {
     const tasks = await this.readTasks();
@@ -150,6 +153,11 @@ export class TaskManagerTool {
 
     if (taskIndex === -1) {
       return null;
+    }
+
+    // 檢查是否嘗試將任務設置為已完成狀態
+    if (updates.status === TaskStatus.COMPLETED) {
+      throw new Error('不能使用 updateTask 方法將任務標記為已完成，請使用 completeTask 方法');
     }
 
     // 更新任務
@@ -163,6 +171,37 @@ export class TaskManagerTool {
     await this.writeTasks(tasks);
 
     return tasks[taskIndex];
+  }
+
+  /**
+   * 完成任務
+   * 專門用於將任務標記為已完成並設置實際完成時間
+   * @param taskId 任務ID
+   * @param completionDate 可選的完成時間，默認為當前時間
+   * @returns 更新後的任務，如果任務不存在則返回null
+   */
+  public static async completeTask(taskId: string, completionDate?: string): Promise<Task | null> {
+    const tasks = await this.readTasks();
+    const taskIndex = tasks.findIndex(t => t.id === taskId);
+
+    if (taskIndex === -1) {
+      return null;
+    }
+
+    const task = tasks[taskIndex];
+    
+    // 設置完成時間
+    const now = completionDate || new Date().toISOString();
+    
+    // 更新任務狀態
+    task.status = TaskStatus.COMPLETED;
+    task.actualCompletionDate = now;
+    task.updatedAt = new Date().toISOString();
+
+    // 保存所有任務
+    await this.writeTasks(tasks);
+
+    return task;
   }
 
   /**
@@ -211,10 +250,11 @@ export class TaskManagerTool {
     // 更新任務
     task.updatedAt = new Date().toISOString();
 
-    // 如果所有步驟都已完成，則更新任務狀態為已完成
+    // 檢查所有步驟是否完成，如果所有步驟完成則提示用戶使用 completeTask
     const allStepsCompleted = task.steps.every(s => s.completed);
     if (allStepsCompleted && task.status !== TaskStatus.COMPLETED) {
-      task.status = TaskStatus.COMPLETED;
+      // 不自動設置任務為完成狀態，顯示提示信息
+      console.log(`任務 "${task.title}" 的所有步驟已完成，請使用 completeTask 方法將任務標記為已完成`);
     }
 
     // 保存所有任務
@@ -341,7 +381,41 @@ export class TaskManagerTool {
       if (filter.dueDateTo && task.dueDate) {
         const dueDateTo = new Date(filter.dueDateTo);
         const taskDueDate = new Date(task.dueDate);
+
+        // 根據預計開始時間過濾
+        if (filter.plannedStartDateFrom && task.plannedStartDate) {
+          const plannedStartDateFrom = new Date(filter.plannedStartDateFrom);
+          const taskPlannedStartDate = new Date(task.plannedStartDate);
+          if (taskPlannedStartDate < plannedStartDateFrom) {
+            return false;
+          }
+        }
+
+        if (filter.plannedStartDateTo && task.plannedStartDate) {
+          const plannedStartDateTo = new Date(filter.plannedStartDateTo);
+          const taskPlannedStartDate = new Date(task.plannedStartDate);
+          if (taskPlannedStartDate > plannedStartDateTo) {
+            return false;
+          }
+        }
         if (taskDueDate > dueDateTo) {
+          return false;
+        }
+      }
+
+      // 根據建立時間過濾
+      if (filter.createdFrom) {
+        const createdFrom = new Date(filter.createdFrom);
+        const taskCreatedDate = new Date(task.createdAt);
+        if (taskCreatedDate < createdFrom) {
+          return false;
+        }
+      }
+
+      if (filter.createdTo) {
+        const createdTo = new Date(filter.createdTo);
+        const taskCreatedDate = new Date(task.createdAt);
+        if (taskCreatedDate > createdTo) {
           return false;
         }
       }
@@ -366,9 +440,12 @@ export class TaskManagerTool {
 
   /**
    * 獲取任務分析
+   * @param filter 可選的任務篩選條件，無篩選條件則分析所有任務
+   * @returns 分析結果
    */
-  public static async analyzeTaskStatus(): Promise<TaskAnalysis> {
-    const tasks = await this.readTasks();
+  public static async analyzeTaskStatus(filter?: TaskFilter): Promise<TaskAnalysis> {
+    // 如果提供了篩選條件，先進行篩選；否則使用所有任務
+    const tasks = filter ? await this.searchTasks(filter) : await this.readTasks();
 
     // 初始化分析結果
     const analysis: TaskAnalysis = {
@@ -424,12 +501,8 @@ export class TaskManagerTool {
       let completedTasksWithTimes = 0;
 
       completedTasks.forEach(task => {
-        const createdDate = new Date(task.createdAt);
-        const updatedDate = new Date(task.updatedAt);
-        const completionTime = updatedDate.getTime() - createdDate.getTime();
-
-        // 轉換為小時
-        const completionTimeHours = completionTime / (1000 * 60 * 60);
+        // 使用工具類計算完成時間
+        const completionTimeHours = TaskTimeUtils.calculateTaskWorkTimeHours(task);
 
         if (!isNaN(completionTimeHours)) {
           totalCompletionTime += completionTimeHours;
@@ -442,45 +515,131 @@ export class TaskManagerTool {
       }
     }
 
+    // 計算完成任務的實際時間與預計時間的差異
+    if (completedTasks.length > 0) {
+      let totalTimeDifference = 0;
+      let tasksWithTimeDifference = 0;
+      const taskTimeDifferences: Array<{
+        taskId: string;
+        title: string;
+        completionDate: string;
+        estimatedTotalTime: number;
+        actualWorkTime: number;
+        timeDifference: number;
+      }> = [];
+
+      completedTasks.forEach(task => {
+        // 只處理有步驟且有預計完成時間的任務
+        const stepsWithEstimatedTime = task.steps.filter(step =>
+          typeof step.estimatedTime === 'number' && step.estimatedTime > 0
+        );
+
+        if (stepsWithEstimatedTime.length > 0) {
+          // 使用工具類計算任務時間
+          const totalEstimatedTime = TaskTimeUtils.calculateTotalEstimatedTime(task);
+          const actualCompletionMinutes = TaskTimeUtils.calculateTaskWorkTimeMinutes(task);
+          
+          // 計算時間差異（正值表示超時，負值表示提前完成）
+          const timeDifference = TaskTimeUtils.calculateTimeDifference(task) || 0; // 如果返回null，使用0
+
+          // 記錄任務時間差異詳情
+          const timeInfo = TaskTimeUtils.getTaskTimeInfo(task);
+          taskTimeDifferences.push({
+            taskId: task.id,
+            title: task.title,
+            completionDate: task.actualCompletionDate || task.updatedAt,
+            estimatedTotalTime: timeInfo.estimatedTotalTime,
+            actualWorkTime: timeInfo.actualWorkTime, // 實際工作時間
+            timeDifference: timeInfo.timeDifference || 0 // 如果返回null，使用0
+          });
+
+          totalTimeDifference += timeDifference;
+          tasksWithTimeDifference++;
+        }
+      });
+
+      // 計算平均時間差異
+      if (tasksWithTimeDifference > 0) {
+        analysis.averageTimeDifference = totalTimeDifference / tasksWithTimeDifference;
+        analysis.taskTimeDifferences = taskTimeDifferences;
+      }
+    }
+
     return analysis;
   }
 
-    /**
+  /**
      * 設置任務所有步驟的完成狀態
      * @param taskId 任務ID
      * @param completed 是否完成
      * @returns 更新後的任務，如果任務不存在則返回null
      */
-    public static async setAllStepsStatus(taskId: string, completed: boolean): Promise<Task | null> {
-      const tasks = await this.readTasks();
-      const taskIndex = tasks.findIndex(t => t.id === taskId);
+  public static async setAllStepsStatus(taskId: string, completed: boolean): Promise<Task | null> {
+    const tasks = await this.readTasks();
+    const taskIndex = tasks.findIndex(t => t.id === taskId);
 
-      if (taskIndex === -1) {
-        return null;
-      }
-
-      const task = tasks[taskIndex];
-
-      // 更新所有步驟狀態
-      task.steps = task.steps.map(step => ({
-        ...step,
-        completed
-      }));
-
-      // 更新任務
-      task.updatedAt = new Date().toISOString();
-
-      // 如果所有步驟都已完成並且狀態為已完成，則更新任務狀態
-      if (completed && task.status !== TaskStatus.COMPLETED) {
-        task.status = TaskStatus.COMPLETED;
-      } else if (!completed && task.status === TaskStatus.COMPLETED) {
-        // 如果將步驟設為未完成，且當前任務狀態為已完成，則將狀態改為進行中
-        task.status = TaskStatus.IN_PROGRESS;
-      }
-
-      // 保存所有任務
-      await this.writeTasks(tasks);
-
-      return task;
+    if (taskIndex === -1) {
+      return null;
     }
+
+    const task = tasks[taskIndex];
+
+    // 更新所有步驟狀態
+    task.steps = task.steps.map(step => ({
+      ...step,
+      completed
+    }));
+
+    // 更新任務
+    task.updatedAt = new Date().toISOString();
+
+    // 當所有步驟完成時，提示使用completeTask來標記任務為已完成
+    if (completed && task.status !== TaskStatus.COMPLETED) {
+      // 不自動設置任務為完成狀態，僅顯示提示信息
+      console.log(`任務 "${task.title}" 的所有步驟已完成，請使用 completeTask 方法將任務標記為已完成`);
+    } else if (!completed && task.status === TaskStatus.COMPLETED) {
+      // 如果將步驟設為未完成，且當前任務狀態為已完成，則將狀態改為進行中
+      task.status = TaskStatus.IN_PROGRESS;
+      // 移除實際完成時間
+      delete task.actualCompletionDate;
+    }
+
+    // 保存所有任務
+    await this.writeTasks(tasks);
+
+    return task;
+  }
+  /**
+   * 開始一個任務
+   * @param taskId 任務ID
+   * @returns 更新後的任務，如果任務不存在則返回null
+   */
+  public static async startTask(taskId: string): Promise<Task | null> {
+    const tasks = await this.readTasks();
+    const taskIndex = tasks.findIndex(t => t.id === taskId);
+
+    if (taskIndex === -1) {
+      return null;
+    }
+
+    const task = tasks[taskIndex];
+    
+    // 只有待處理的任務才能被啟動
+    if (task.status !== TaskStatus.PENDING) {
+      throw new Error(`無法啟動任務，當前狀態為: ${task.status}`);
+    }
+
+    // 設置當前時間為實際開始時間
+    const now = new Date().toISOString();
+    
+    // 更新任務
+    task.status = TaskStatus.IN_PROGRESS;
+    task.actualStartDate = now;
+    task.updatedAt = now;
+
+    // 保存所有任務
+    await this.writeTasks(tasks);
+
+    return task;
+  }
 }
