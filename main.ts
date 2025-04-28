@@ -585,7 +585,7 @@ server.tool("taskCreate",
                 steps,
                 tags,
                 dueDate,
-                priority
+                String(priority)
             );
 
             return {
