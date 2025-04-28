@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/mseep-audited.png)](https://mseep.ai/app/gontwvn-gonmcptool)
+
 # MCP 伺服器工具集
 
 [![smithery badge](https://smithery.ai/badge/@GonTwVn/GonMCPtool)](https://smithery.ai/server/@GonTwVn/GonMCPtool)
